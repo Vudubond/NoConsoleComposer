@@ -22,30 +22,49 @@ function downloadComposer()
 {
     $installerURL = 'https://getcomposer.org/installer';
     $installerFile = 'installer.php';
-    if (!file_exists($installerFile))
-    {
-        echo 'Downloading ' . $installerURL . PHP_EOL;
-        flush();
-        $ch = curl_init($installerURL);
-        curl_setopt($ch, CURLOPT_CAINFO, __DIR__ . '/cacert.pem');
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
-        curl_setopt($ch, CURLOPT_FILE, fopen($installerFile, 'w+'));
-        if (curl_exec($ch))
-            echo 'Success downloading ' . $installerURL . PHP_EOL;
-        else
-        {
-            echo 'Error downloading ' . $installerURL . PHP_EOL;
-            die();
-        }
-        flush();
+
+    if (file_exists($installerFile)) {
+        echo 'Installer already downloaded: ' . $installerFile . PHP_EOL;
+        return;
     }
-    echo 'Installer found : ' . $installerFile . PHP_EOL;
+
+    echo 'Downloading ' . $installerURL . PHP_EOL;
+    flush();
+
+    $fileHandle = fopen($installerFile, 'w+');
+    if (!$fileHandle) {
+        die('Error: Unable to open file for writing: ' . $installerFile . PHP_EOL);
+    }
+
+    $ch = curl_init($installerURL);
+    curl_setopt($ch, CURLOPT_CAINFO, __DIR__ . '/cacert.pem'); // Path to certificate bundle
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable certificate validation
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_FILE, $fileHandle);
+
+    if (curl_exec($ch)) {
+        echo 'Success downloading ' . $installerURL . PHP_EOL;
+    } else {
+        echo 'Error downloading ' . $installerURL . PHP_EOL;
+        fclose($fileHandle);
+        curl_close($ch);
+        die();
+    }
+
+    fclose($fileHandle);
+    curl_close($ch);
+
+    echo 'Installer found: ' . $installerFile . PHP_EOL;
     echo 'Starting installation...' . PHP_EOL;
     flush();
+
+    // Include and run the installer
     $argv = array();
     include $installerFile;
     flush();
 }
+
 
 function extractComposer()
 {
